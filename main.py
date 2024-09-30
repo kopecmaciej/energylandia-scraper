@@ -56,10 +56,17 @@ def process_data(data):
     for attraction in data['data']:
         if attraction[2] == "Czynna":
             processed_data.append(attraction[1])
-    return processed_data
+        else:
+            processed_data.append('-')
+    return processed_data if any(value != '-' for value in processed_data[1:]) else None
 
 def append_to_csv(data, filename='attraction_data.csv'):
     file_exists = os.path.isfile(filename)
+    
+    processed_data = process_data(data)
+    if processed_data is None:
+        print("No active attractions. Skipping this record.")
+        return
     
     with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
@@ -68,7 +75,7 @@ def append_to_csv(data, filename='attraction_data.csv'):
             headers = ['Timestamp'] + [attraction[0] for attraction in data['data'] if attraction[2] == "Czynna"]
             writer.writerow(headers)
         
-        writer.writerow(process_data(data))
+        writer.writerow(processed_data)
 
 @app.get("/energylandia-csv")
 async def download_csv():
