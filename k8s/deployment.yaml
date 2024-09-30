@@ -1,0 +1,80 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: energylandia-scraper-pv-v2
+  labels:
+    type: local
+    app: energylandia-scraper
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/energylandia-scraper"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: energylandia-scraper-pvc-v2
+  labels:
+    app: energylandia-scraper
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: energylandia-scraper
+  labels:
+    app: energylandia-scraper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: energylandia-scraper
+  template:
+    metadata:
+      labels:
+        app: energylandia-scraper
+    spec:
+      containers:
+      - name: energylandia-scraper
+        image: umyslmaszyny.pl/energylandia-scraper:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: HOST
+          value: "0.0.0.0"
+        - name: ENV
+          value: "production"
+        volumeMounts:
+        - name: scraper-storage
+          mountPath: /app/data
+      volumes:
+      - name: scraper-storage
+        persistentVolumeClaim:
+          claimName: energylandia-scraper-pvc-v2
+      imagePullSecrets:
+      - name: registry-creds
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: energylandia-scraper
+  labels:
+    app: energylandia-scraper
+spec:
+  type: LoadBalancer
+  selector:
+    app: energylandia-scraper
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
